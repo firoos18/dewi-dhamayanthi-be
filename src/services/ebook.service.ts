@@ -12,37 +12,40 @@ export const SAddEbook = async (req: Request): Promise<IBaseResponse> => {
   try {
     const ebookData: IAddEbook = req.body;
 
-    let fileName: string = "";
+    const newEbook = await db.mst_ebook.create({
+      data: {
+        title: ebookData.title,
+        author: ebookData.author,
+        url: ebookData.url,
+        status: ebookData.status,
+        description: ebookData.description,
+        cover: null,
+        created_at: new Date(),
+        categoryId: ebookData.categoryId,
+      },
+    });
 
     if (req.file) {
-      fileName = `books/${ebookData.title.toLowerCase()}`;
-    }
+      const fileExt = req.file.mimetype.split("/")[1];
+      const fileName = `books/${newEbook.id}.${fileExt}`;
 
-    if (req.file) {
       const { data, error } = await supabase.storage
         .from("ebook-covers")
         .upload(fileName, req.file.buffer, {
           contentType: req.file.mimetype,
+          upsert: true,
         });
 
       if (error) throw new Error("Failed to upload image: " + error.message);
 
       const { data: publicUrl } = supabase.storage
         .from("ebook-covers")
-        .getPublicUrl(data.path);
+        .getPublicUrl(fileName);
 
-      await db.mst_ebook.create({
+      await db.mst_ebook.update({
+        where: { id: newEbook.id },
         data: {
-          ...ebookData,
           cover: publicUrl.publicUrl,
-          created_at: new Date(),
-        },
-      });
-    } else {
-      await db.mst_ebook.create({
-        data: {
-          ...ebookData,
-          created_at: new Date(),
         },
       });
     }
