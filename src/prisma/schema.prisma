@@ -1,0 +1,65 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+model mst_ebook {
+    id           String          @id @default(uuid())
+    title        String
+    description  String
+    cover        String?
+    url          String
+    status       EbookStatus     @default(DRAFT)
+    author       String
+    categoryId   String
+    tags         mst_ebook_tag[] @relation("EbookTags")
+    published_at DateTime?
+    updated_at   DateTime?
+    created_at   DateTime?       @default(now())
+    deleted_at   DateTime?
+
+    category mst_ebook_category @relation(fields: [categoryId], references: [id])
+
+    @@index([title])
+    @@index([id])
+    @@index([categoryId])
+}
+
+model mst_ebook_category {
+    id         String      @id @default(uuid())
+    name       String
+    mst_ebook  mst_ebook[]
+    updated_at DateTime?
+    created_at DateTime?   @default(now())
+    deleted_at DateTime?
+}
+
+model mst_ebook_tag {
+    id         String      @id @default(uuid())
+    name       String      @unique
+    ebooks     mst_ebook[] @relation("EbookTags")
+    updated_at DateTime?
+    created_at DateTime?   @default(now())
+    deleted_at DateTime?
+}
+
+enum EbookStatus {
+    DRAFT
+    PUBLISHED
+    UNPUBLISHED
+}
+
+model mst_user {
+    id         String    @id @default(uuid())
+    email      String    @unique
+    password   String
+    fullname   String
+    updated_at DateTime?
+    created_at DateTime? @default(now())
+    deleted_at DateTime?
+}
