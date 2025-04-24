@@ -22,6 +22,7 @@ export const SAddEbook = async (req: Request): Promise<IBaseResponse> => {
         cover: null,
         created_at: new Date(),
         categoryId: ebookData.categoryId,
+        published_at: ebookData.status === "PUBLISHED" ? new Date() : null,
       },
     });
 
