@@ -26,3 +26,14 @@ export interface IGetAllEbooks {
   category: string;
   published_at: string | null;
 }
+
+export interface IUpdateEbook {
+  title: string;
+  description: string;
+  cover?: string;
+  url: string;
+  author: string;
+  categoryId: string;
+  status: EbookStatus;
+  published_at?: Date;
+}

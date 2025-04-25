@@ -8,7 +8,6 @@ import bcrypt from "bcryptjs";
 import db from "../prisma/client.prisma";
 import { CreateToken } from "../helper/jwt.helper";
 import { ConflictError, UnauthorizedError } from "../utils/HttpError";
-import { mst_user } from "@prisma/client";
 
 export const SUserLogin = async (
   body: IUserLoginRequestBody

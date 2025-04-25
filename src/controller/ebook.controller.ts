@@ -3,6 +3,7 @@ import {
   SAddEbook,
   SGetAllBooks,
   SGetEbookById,
+  SUpdateEbook,
 } from "../services/ebook.service";
 
 export const CAddEbook = async (
@@ -46,6 +47,22 @@ export const CGetEbookById = async (
     const id = req.params.id.toString();
 
     const resData = await SGetEbookById(id);
+
+    res.status(200).json(resData);
+  } catch (error: any) {
+    next(error);
+  }
+};
+
+export const CUpdateEbook = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const id = req.params.id.toString();
+
+    const resData = await SUpdateEbook(id, req);
 
     res.status(200).json(resData);
   } catch (error: any) {

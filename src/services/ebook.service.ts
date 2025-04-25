@@ -1,5 +1,9 @@
 import { Request } from "express";
-import { IAddEbook, IGetAllEbooks } from "../interfaces/ebook.interface";
+import {
+  IAddEbook,
+  IGetAllEbooks,
+  IUpdateEbook,
+} from "../interfaces/ebook.interface";
 import {
   IBaseResponse,
   IPaginatedResponse,
@@ -170,8 +174,57 @@ export const SGetEbookById = async (
   }
 };
 
-export const SUpdateEbook = async (id: string) => {
+export const SUpdateEbook = async (id: string, req: Request) => {
   try {
+    const updateData: IUpdateEbook = req.body;
+    const updateFields = {
+      title: updateData.title || undefined,
+      description: updateData.description || undefined,
+      cover: updateData.cover || undefined,
+      status: updateData.status || undefined,
+      url: updateData.url || undefined,
+      author: updateData.author || undefined,
+      categoryId: updateData.categoryId || undefined,
+      published_at: updateData.status === "PUBLISHED" ? new Date() : undefined,
+      updated_at: new Date(),
+    };
+
+    const ebook = await db.mst_ebook.findUnique({ where: { id } });
+    if (!ebook) throw new NotFoundError("Ebook not found!");
+
+    if (req.file) {
+      const fileExt = req.file.mimetype.split("/")[1];
+      const fileName = `books/${ebook.id}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from("ebook-covers")
+        .upload(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+      if (error) throw new Error("Failed to upload image: " + error.message);
+
+      const { data: publicUrl } = supabase.storage
+        .from("ebook-covers")
+        .getPublicUrl(fileName);
+
+      await db.mst_ebook.update({
+        where: { id: ebook.id },
+        data: {
+          cover: publicUrl.publicUrl,
+        },
+      });
+    }
+
+    await db.mst_ebook.update({
+      where: { id },
+      data: updateFields,
+    });
+
+    return {
+      status: true,
+      message: "Success update ebook!",
+    };
   } catch (error: any) {
     throw Error(error);
   }

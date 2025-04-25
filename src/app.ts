@@ -17,4 +17,6 @@ app.use("/ebook-category", ebookCategoryRouter);
 
 app.use(errorHandler);
 
+app.listen(4000);
+
 export default app;
