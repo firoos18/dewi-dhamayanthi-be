@@ -11,8 +11,8 @@ app.use(cookieParser());
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "https://dewi-dhamayanthi.vercel.app/",
-  "https://dev-dewi-dhamayanthi.vercel.app/",
+  "https://dewi-dhamayanthi.vercel.app",
+  "https://dev-dewi-dhamayanthi.vercel.app",
 ];
 
 app.use(
@@ -25,7 +25,7 @@ app.use(
       }
     },
     credentials: true,
-    methods: ["POST", "PUT", "GET", "DELETE"],
+    methods: ["POST", "PUT", "GET", "DELETE", "OPTIONS"],
   })
 );
 app.use(express.json());
