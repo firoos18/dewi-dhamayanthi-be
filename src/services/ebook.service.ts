@@ -11,6 +11,7 @@ import {
 import db from "../prisma/client.prisma";
 import supabase from "../config/supabase.config";
 import { NotFoundError } from "../utils/HttpError";
+import { Prisma } from "@prisma/client";
 
 export const SAddEbook = async (req: Request): Promise<IBaseResponse> => {
   try {
@@ -67,37 +68,44 @@ export const SAddEbook = async (req: Request): Promise<IBaseResponse> => {
 export const SGetAllBooks = async (
   page: number = 1,
   pageSize: number = 8,
-  query: string = ""
+  query: string = "",
+  category: string[] = []
 ): Promise<IPaginatedResponse<IGetAllEbooks[]>> => {
   try {
     const skip = (page - 1) * pageSize;
 
+    const whereCondition = {
+      deleted_at: null,
+      ...(query && {
+        title: {
+          contains: query,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+      ...(category.length > 0 && {
+        category: {
+          name: {
+            in: category,
+          },
+        },
+      }),
+    };
+
     const [bookData, totalRecords] = await Promise.all([
       db.mst_ebook.findMany({
-        where:
-          query === ""
-            ? {
-                deleted_at: null,
-              }
-            : {
-                deleted_at: null,
-                OR: [{ title: { contains: query, mode: "insensitive" } }],
-              },
+        where: whereCondition,
         include: {
           tags: true,
           category: true,
         },
         skip,
         take: pageSize,
+        orderBy: {
+          created_at: "desc",
+        },
       }),
       db.mst_ebook.count({
-        where:
-          query === ""
-            ? { deleted_at: null }
-            : {
-                deleted_at: null,
-                OR: [{ title: { contains: query, mode: "insensitive" } }],
-              },
+        where: whereCondition,
       }),
     ]);
 
@@ -198,7 +206,7 @@ export const SUpdateEbook = async (id: string, req: Request) => {
 
       const { data, error } = await supabase.storage
         .from("ebook-covers")
-        .upload(fileName, req.file.buffer, {
+        .update(fileName, req.file.buffer, {
           contentType: req.file.mimetype,
           upsert: true,
         });
