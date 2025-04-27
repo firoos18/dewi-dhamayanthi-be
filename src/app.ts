@@ -8,13 +8,25 @@ import ebookCategoryRouter from "./routes/ebook.category.route";
 
 const app = express();
 app.use(cookieParser());
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://dewi-dhamayanthi.vercel.app/",
+  "https://dev-dewi-dhamayanthi.vercel.app/",
+];
+
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
-
 app.use(express.json());
 
 // Route
