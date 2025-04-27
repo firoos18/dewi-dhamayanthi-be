@@ -1,12 +1,18 @@
 import express from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import { errorHandler } from "./middleware/error.middleware";
 import ebookRouter from "./routes/ebook.route";
 import authRouter from "./routes/auth.route";
 import ebookCategoryRouter from "./routes/ebook.category.route";
 
 const app = express();
-app.use(cors());
+app.use(cookieParser());
+app.use(
+  cors({
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 

@@ -10,7 +10,8 @@ export interface IUserLoginRequestBody {
 }
 
 export interface IUserLoginResponseBody {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
 }
 
 export interface IUserRegisterRequestBody {
