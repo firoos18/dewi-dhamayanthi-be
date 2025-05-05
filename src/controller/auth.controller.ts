@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { SRegisterUser, SUserLogin } from "../services/auth.service";
-import { CreateToken } from "../helper/jwt.helper";
+import { CreateRefreshToken, CreateToken } from "../helper/jwt.helper";
 import jwt from "jsonwebtoken";
 
 export const CUserLogin = async (
@@ -11,14 +11,14 @@ export const CUserLogin = async (
   try {
     const resData = await SUserLogin(req.body);
 
-    res.cookie("token", resData.data?.accessToken, {
+    res.cookie("accessToken", resData.data?.accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 15 * 60 * 1000,
     });
 
-    res.cookie("refresh_token", resData.data?.refreshToken, {
+    res.cookie("refreshToken", resData.data?.refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
@@ -73,7 +73,7 @@ export const CRefreshToken = async (
   next: NextFunction
 ) => {
   try {
-    const refreshToken = req.cookies.refresh_token;
+    const refreshToken = req.cookies.refreshToken;
 
     if (!refreshToken) {
       throw new Error("No refresh token provided");
@@ -89,15 +89,30 @@ export const CRefreshToken = async (
     }
 
     const newAccessToken = CreateToken({ id: decoded.id });
+    const newRefreshToken = CreateRefreshToken({ id: decoded.id });
 
-    res.cookie("token", newAccessToken, {
+    res.cookie("accessToken", newAccessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       maxAge: 15 * 60 * 1000,
     });
 
-    res.status(200).json({ status: true, message: "Access token refreshed" });
+    res.cookie("refreshToken", newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 1 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      status: true,
+      message: "Access token refreshed",
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      },
+    });
   } catch (error: any) {
     next(error);
   }
