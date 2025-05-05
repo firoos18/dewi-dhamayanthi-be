@@ -1,5 +1,9 @@
 import { Request } from "express";
-import { IAddEbook, IGetAllEbooks } from "../interfaces/ebook.interface";
+import {
+  IAddEbook,
+  IGetAllEbooks,
+  IUpdateEbook,
+} from "../interfaces/ebook.interface";
 import {
   IBaseResponse,
   IPaginatedResponse,
@@ -7,42 +11,47 @@ import {
 import db from "../prisma/client.prisma";
 import supabase from "../config/supabase.config";
 import { NotFoundError } from "../utils/HttpError";
+import { EbookStatus, Prisma } from "@prisma/client";
 
 export const SAddEbook = async (req: Request): Promise<IBaseResponse> => {
   try {
     const ebookData: IAddEbook = req.body;
 
-    let fileName: string = "";
+    const newEbook = await db.mst_ebook.create({
+      data: {
+        title: ebookData.title,
+        author: ebookData.author,
+        url: ebookData.url,
+        status: ebookData.status,
+        description: ebookData.description,
+        cover: null,
+        created_at: new Date(),
+        categoryId: ebookData.categoryId,
+        published_at: ebookData.status === "PUBLISHED" ? new Date() : null,
+      },
+    });
 
     if (req.file) {
-      fileName = `books/${ebookData.title.toLowerCase()}`;
-    }
+      const fileExt = req.file.mimetype.split("/")[1];
+      const fileName = `books/${newEbook.id}.${fileExt}`;
 
-    if (req.file) {
       const { data, error } = await supabase.storage
         .from("ebook-covers")
         .upload(fileName, req.file.buffer, {
           contentType: req.file.mimetype,
+          upsert: true,
         });
 
       if (error) throw new Error("Failed to upload image: " + error.message);
 
       const { data: publicUrl } = supabase.storage
         .from("ebook-covers")
-        .getPublicUrl(data.path);
+        .getPublicUrl(fileName);
 
-      await db.mst_ebook.create({
+      await db.mst_ebook.update({
+        where: { id: newEbook.id },
         data: {
-          ...ebookData,
           cover: publicUrl.publicUrl,
-          created_at: new Date(),
-        },
-      });
-    } else {
-      await db.mst_ebook.create({
-        data: {
-          ...ebookData,
-          created_at: new Date(),
         },
       });
     }
@@ -59,37 +68,48 @@ export const SAddEbook = async (req: Request): Promise<IBaseResponse> => {
 export const SGetAllBooks = async (
   page: number = 1,
   pageSize: number = 8,
-  query: string = ""
+  query: string = "",
+  category: string[] = [],
+  status: string = ""
 ): Promise<IPaginatedResponse<IGetAllEbooks[]>> => {
   try {
     const skip = (page - 1) * pageSize;
 
+    const whereCondition = {
+      deleted_at: null,
+      ...(query && {
+        title: {
+          contains: query,
+          mode: Prisma.QueryMode.insensitive,
+        },
+      }),
+      ...(category.length > 0 && {
+        category: {
+          name: {
+            in: category,
+          },
+        },
+      }),
+      ...(status && {
+        status: status as EbookStatus,
+      }),
+    };
+
     const [bookData, totalRecords] = await Promise.all([
       db.mst_ebook.findMany({
-        where:
-          query === ""
-            ? {
-                deleted_at: null,
-              }
-            : {
-                deleted_at: null,
-                OR: [{ title: { contains: query, mode: "insensitive" } }],
-              },
+        where: whereCondition,
         include: {
           tags: true,
           category: true,
         },
         skip,
         take: pageSize,
+        orderBy: {
+          created_at: "desc",
+        },
       }),
       db.mst_ebook.count({
-        where:
-          query === ""
-            ? { deleted_at: null }
-            : {
-                deleted_at: null,
-                OR: [{ title: { contains: query, mode: "insensitive" } }],
-              },
+        where: whereCondition,
       }),
     ]);
 
@@ -166,8 +186,57 @@ export const SGetEbookById = async (
   }
 };
 
-export const SUpdateEbook = async (id: string) => {
+export const SUpdateEbook = async (id: string, req: Request) => {
   try {
+    const updateData: IUpdateEbook = req.body;
+    const updateFields = {
+      title: updateData.title || undefined,
+      description: updateData.description || undefined,
+      cover: updateData.cover || undefined,
+      status: updateData.status || undefined,
+      url: updateData.url || undefined,
+      author: updateData.author || undefined,
+      categoryId: updateData.categoryId || undefined,
+      published_at: updateData.status === "PUBLISHED" ? new Date() : undefined,
+      updated_at: new Date(),
+    };
+
+    const ebook = await db.mst_ebook.findUnique({ where: { id } });
+    if (!ebook) throw new NotFoundError("Ebook not found!");
+
+    if (req.file) {
+      const fileExt = req.file.mimetype.split("/")[1];
+      const fileName = `books/${ebook.id}.${fileExt}`;
+
+      const { data, error } = await supabase.storage
+        .from("ebook-covers")
+        .update(fileName, req.file.buffer, {
+          contentType: req.file.mimetype,
+          upsert: true,
+        });
+      if (error) throw new Error("Failed to upload image: " + error.message);
+
+      const { data: publicUrl } = supabase.storage
+        .from("ebook-covers")
+        .getPublicUrl(fileName);
+
+      await db.mst_ebook.update({
+        where: { id: ebook.id },
+        data: {
+          cover: publicUrl.publicUrl,
+        },
+      });
+    }
+
+    await db.mst_ebook.update({
+      where: { id },
+      data: updateFields,
+    });
+
+    return {
+      status: true,
+      message: "Success update ebook!",
+    };
   } catch (error: any) {
     throw Error(error);
   }

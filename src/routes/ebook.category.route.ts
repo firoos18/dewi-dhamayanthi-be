@@ -8,8 +8,6 @@ const router = Router();
 
 router.get("/", CGetAllEbookCategories);
 
-// router.get("/:id", CGetEbookById);
-
 router.post("/", CAddEbookCategory);
 
 export default router;

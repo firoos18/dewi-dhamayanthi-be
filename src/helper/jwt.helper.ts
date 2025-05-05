@@ -10,6 +10,12 @@ export const CreateToken = (payload: IJWTPayload) =>
     algorithm: "HS256",
   });
 
+export const CreateRefreshToken = (payload: IJWTPayload) =>
+  jwt.sign(payload, env.JWT.REFRESH_SECRET, {
+    expiresIn: "1d",
+    algorithm: "HS256",
+  });
+
 export const VerifyToken = async (token: string): Promise<IJWTUserPayload> => {
   try {
     const tokenData: IJWTPayload = jwt.verify(
