@@ -11,7 +11,7 @@ import {
 import db from "../prisma/client.prisma";
 import supabase from "../config/supabase.config";
 import { NotFoundError } from "../utils/HttpError";
-import { Prisma } from "@prisma/client";
+import { EbookStatus, Prisma } from "@prisma/client";
 
 export const SAddEbook = async (req: Request): Promise<IBaseResponse> => {
   try {
@@ -69,7 +69,8 @@ export const SGetAllBooks = async (
   page: number = 1,
   pageSize: number = 8,
   query: string = "",
-  category: string[] = []
+  category: string[] = [],
+  status: string = ""
 ): Promise<IPaginatedResponse<IGetAllEbooks[]>> => {
   try {
     const skip = (page - 1) * pageSize;
@@ -88,6 +89,9 @@ export const SGetAllBooks = async (
             in: category,
           },
         },
+      }),
+      ...(status && {
+        status: status as EbookStatus,
       }),
     };
 

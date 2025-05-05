@@ -34,8 +34,9 @@ export const CGetAllBooks = async (
         ? req.query.category.filter((item) => typeof item === "string")
         : [req.query.category.toString()]
       : [];
+    const status = req.query.status?.toString();
 
-    const resData = await SGetAllBooks(page, pageSize, query, category);
+    const resData = await SGetAllBooks(page, pageSize, query, category, status);
 
     res.status(200).json(resData);
   } catch (error) {
